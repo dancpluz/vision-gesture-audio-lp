@@ -2,7 +2,8 @@ use opencv::{
     prelude::*,
     videoio,
     highgui,
-    imgproc
+    imgproc,
+    core::Size,
 };
 /*
 fn cam() -> opencv::Result<videoio::VideoCapture> {
@@ -69,6 +70,8 @@ fn main() -> opencv::Result<()> {
     // 3. Criar um Mat (Matriz) para armazenar cada frame
     let mut frame = Mat::default();
     let mut gray_frame = Mat::default();
+    let mut blurred_frame = Mat::default();
+    let mut edges_frame = Mat::default();
 
     // 4. Iniciar o loop de captura (com replay automático ao fim)
     loop {
@@ -83,9 +86,37 @@ fn main() -> opencv::Result<()> {
             continue;
         }
 
-        // 5. Converter para gris e exibir o frame na janela
-        imgproc::cvt_color(&frame, &mut gray_frame, imgproc::COLOR_BGR2GRAY, 0)?;
-        highgui::imshow("Video", &gray_frame)?;
+        if frame.size()?.width > 0 {
+            // Passo 1: Escala de Cinza
+            imgproc::cvt_color(
+                &frame, 
+                &mut gray_frame, 
+                imgproc::COLOR_BGR2GRAY, 
+                0
+            )?;
+
+            // Passo 2: Desfoque Gaussiano
+            imgproc::gaussian_blur(
+                &gray_frame,
+                &mut blurred_frame,
+                Size::new(5, 5),
+                0.0, 
+                0.0, 
+                0
+            )?;
+
+            imgproc::canny(
+                &blurred_frame,
+                &mut edges_frame,
+                50.0,
+                150.0,
+                3,
+                false
+            )?;
+
+            // Exibe o resultado das bordas
+            highgui::imshow("Video", &edges_frame)?;
+        }
 
         // 6. Esperar por uma tecla (por 30ms)
         let key = highgui::wait_key(30)?;
