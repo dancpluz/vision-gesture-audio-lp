@@ -41,6 +41,5 @@ WASM_FILE="target/wasm32-wasip1/release/examples/$EXAMPLE_NAME.wasm"
 # Executa o comando
 wasmedge --dir .:. "$WASM_FILE" $EXAMPLE_ARGS
 
-echo ""
 echo "✅ Execução concluída."
 

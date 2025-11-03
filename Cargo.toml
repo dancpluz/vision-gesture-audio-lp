@@ -2,16 +2,11 @@
 name = "mediapipe-rs"
 version = "0.1.0-dev"
 edition = "2021"
-authors = ["bo.yang@smail.nju.edu.cn"]
-categories = ["Webassembly"]
-keywords = ["Webassembly", "wasm", "neural-network", "inference"]
-license-file = "LICENSE"
 readme = "README.md"
 build = "src/build.rs"
-documentation = "https://docs.rs/mediapipe-rs"
-repository = "https://github.com/WasmEdge/mediapipe-rs"
-description = "A Rust library for mediapipe tasks"
-publish = true
+repository = "https://github.com/dancpluz/vision-gesture-audio-lp"
+description = "University project for gesture, vision and audio processing using MediaPipe and WASI-NN"
+publish = false
 
 [package.metadata.docs.rs]
 all-features = true
