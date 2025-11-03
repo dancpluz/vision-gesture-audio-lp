@@ -64,13 +64,46 @@ fn main() -> opencv::Result<()> {
         panic!("Vídeo não pode ser aberto");
     }
 
+    let window_name = "Video";
+
     // 2. Criar uma janela para exibir
-    highgui::named_window("Video", highgui::WINDOW_NORMAL)?;
+    highgui::named_window(window_name, highgui::WINDOW_NORMAL)?;
+
+    // let mut canny_low = 20;
+    // let mut canny_high = 60;
+
+    // highgui::create_trackbar(
+    //     "Canny Low",     // Nome da barra
+    //     window_name,     // Nome da janela
+    //     Some(&mut canny_low),  // Variável que ela controla
+    //     255,             // Valor máximo
+    //     None             // Callback (não precisamos)
+    // )?;
+
+    // highgui::create_trackbar(
+    //     "Canny High",    // Nome da barra
+    //     window_name,     // Nome da janela
+    //     Some(&mut canny_high), // Variável que ela controla
+    //     255,             // Valor máximo
+    //     None             // Callback (não precisamos)
+    // )?;
+
+    // let mut thresh_val = 80;
+    // highgui::create_trackbar(
+    //     "Threshold",     // Nome da barra
+    //     window_name,     // Nome da janela
+    //     Some(&mut thresh_val),  // Variável que ela controla
+    //     255,             // Valor máximo
+    //     None             // Callback (não precisamos)
+    // )?;
 
     // 3. Criar um Mat (Matriz) para armazenar cada frame
     let mut frame = Mat::default();
     let mut gray_frame = Mat::default();
     let mut blurred_frame = Mat::default();
+    let mut thresh_frame = Mat::default();
+    let mut eroded_frame = Mat::default();
+
     let mut edges_frame = Mat::default();
     let mut dilated_frame = Mat::default();
     let mut contours = Vector::<Vector<Point>>::new();
@@ -97,7 +130,6 @@ fn main() -> opencv::Result<()> {
                 0
             )?;
 
-            // Passo 2: Desfoque Gaussiano
             imgproc::gaussian_blur(
                 &gray_frame,
                 &mut blurred_frame,
@@ -107,27 +139,47 @@ fn main() -> opencv::Result<()> {
                 0
             )?;
 
-            imgproc::canny(
-                &blurred_frame,
-                &mut edges_frame,
-                150.0,
-                200.0,
-                3,
-                false
+            imgproc::adaptive_threshold(
+                &blurred_frame,                 // Imagem de entrada
+                &mut thresh_frame,              // Imagem de saída
+                255.0,                          // Valor máximo (branco)
+                imgproc::ADAPTIVE_THRESH_GAUSSIAN_C, // Método adaptativo
+                imgproc::THRESH_BINARY,         // Tipo de limiar
+                11,                             // block_size (tamanho da vizinhança, **precisa ser ímpar**)
+                2.0                             // C (uma constante a ser subtraída da média)
             )?;
 
-            imgproc::dilate(
-                &edges_frame,
-                &mut dilated_frame, // <-- 2. USADO AQUI
-                &no_array(), // Usa um kernel padrão
+            // imgproc::canny(
+            //     &blurred_frame,
+            //     &mut edges_frame,
+            //     canny_low as f64,
+            //     canny_high as f64,
+            //     3,
+            //     false
+            // )?;
+
+            // imgproc::dilate(
+            //     &edges_frame,
+            //     &mut dilated_frame, // <-- 2. USADO AQUI
+            //     &no_array(), // Usa um kernel padrão
+            //     Point::new(-1, -1), // Posição da âncora (padrão)
+            //     5, // Número de iterações
+            //     0, // Tipo de borda
+            //     Scalar::default() // Valor da borda
+            // )?;
+
+            imgproc::erode(
+                &thresh_frame,
+                &mut eroded_frame, // Imagem de saída
+                &no_array(),       // Usa um kernel padrão
                 Point::new(-1, -1), // Posição da âncora (padrão)
-                1, // Número de iterações
-                0, // Tipo de borda
-                Scalar::default() // Valor da borda
+                2,                 // Número de iterações
+                0,                 // Tipo de borda
+                Scalar::default()  // Valor da borda
             )?;
 
             imgproc::find_contours(
-                &mut dilated_frame,
+                &mut eroded_frame, // Imagem de entrada
                 &mut contours,
                 imgproc::RETR_EXTERNAL,
                 imgproc::CHAIN_APPROX_SIMPLE,
@@ -147,7 +199,7 @@ fn main() -> opencv::Result<()> {
             )?;
 
             // Exibe o resultado das bordas
-            highgui::imshow("Video", &dilated_frame)?;
+            highgui::imshow(window_name, &frame)?;
         }
 
         // 6. Esperar por uma tecla (por 30ms)
