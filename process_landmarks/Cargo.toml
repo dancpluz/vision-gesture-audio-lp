@@ -1,0 +1,8 @@
+[package]
+name = "process_landmarks"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mediapipe-rs = { git = "https://github.com/WasmEdge/mediapipe-rs" }
+imageproc = "0.24"

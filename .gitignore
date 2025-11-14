@@ -4,10 +4,6 @@
 .idea
 .vscode
 
-/assets/models
-/assets/ffmpeg-lib
-/assets/wasi-sysroot
-/assets/clang-rt
-/assets/testdata
-
-WasmEdge
+/process_landmarks/assets
+/process_landmarks/target
+/process_landmarks/Cargo.lock
