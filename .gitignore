@@ -1,8 +1,1 @@
 /target
-/Cargo.lock
-
-.idea
-.vscode
-
-/process_landmarks/target
-/process_landmarks/Cargo.lock

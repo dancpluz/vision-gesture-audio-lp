@@ -1,10 +1,10 @@
 # Tarefas
 
 - [ ] Processamento de imagem
-  - [x] Fazer o código buildar https://github.com/WasmEdge/mediapipe-rs
-  - [x] Rodar modelo
-  - [ ] Identificar a mão na webcam
-  - [ ] Mapear pontos da mão
+  - [x] Fazer o código buildar
+  - [ ] Rodar webcam
+  - [ ] Identificar ArUco Marker
+  - [ ] Mapear pontos diferentes
   - [ ] Conectar com o processamento de áudio
 - [ ] Processamento de áudio
   - [x] Fazer o áudio tocar
