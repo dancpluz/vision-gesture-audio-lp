@@ -3,8 +3,8 @@
 - [ ] Processamento de imagem
   - [x] Fazer o código buildar
   - [ ] Rodar webcam
-  - [ ] Identificar ArUco Marker
-  - [ ] Mapear pontos diferentes
+  - [ ] Reconhecer mão
+  - [ ] Mapear no vídeo o parâmetro
   - [ ] Conectar com o processamento de áudio
 - [ ] Processamento de áudio
   - [x] Fazer o áudio tocar

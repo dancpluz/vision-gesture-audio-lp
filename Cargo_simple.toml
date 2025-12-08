@@ -1,0 +1,16 @@
+[package]
+name = "opencv_simple"
+version = "0.1.0"
+edition = "2021"
+
+# Versão alternativa usando bibliotecas mais leves
+[dependencies]
+# Processamento de imagem
+image = "0.24"
+imageproc = "0.23"
+
+# Captura de vídeo (alternativa mais leve)
+# nokhwa = "0.10"  # Biblioteca de captura mais simples
+
+# Interface gráfica (se necessário)
+# eframe = "0.22"  # Para criar interface GUI

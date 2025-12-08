@@ -1,1 +1,31 @@
-/target
+# Rust
+/target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large binaries and executables
+*.exe
+*.dll
+*.so
+*.dylib
+
+# OpenCV build artifacts (too large for git)
+opencv/
+vcpkg/installed/
+
+# Temporary files
+*.tmp
+*.log
+
+# Claude Code settings
+.claude/
+
+# Invalid Windows filename
+nul
