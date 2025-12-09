@@ -1,5 +1,5 @@
-use rodio::{Decoder, OutputStream, Sink, OutputStreamBuilder};
 use rodio::source::Source;
+use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
@@ -16,7 +16,7 @@ impl AudioPlayer {
     /// Cria um novo AudioPlayer
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let stream = OutputStreamBuilder::open_default_stream()?;
-        
+
         Ok(AudioPlayer {
             stream: Arc::new(Mutex::new(stream)),
             main_sink: Arc::new(Mutex::new(None)),
@@ -34,19 +34,19 @@ impl AudioPlayer {
 
         let stream = self.stream.lock().unwrap();
         let sink = Sink::connect_new(&stream.mixer());
-        
+
         // Liberar lock antes de modificar o sink
         drop(stream);
-        
+
         sink.append(pitched.repeat_infinite());
-        
+
         // Substituir sink anterior
         let mut main_sink = self.main_sink.lock().unwrap();
         if let Some(old_sink) = main_sink.take() {
             old_sink.stop();
         }
         *main_sink = Some(sink);
-        
+
         Ok(())
     }
 
@@ -54,7 +54,6 @@ impl AudioPlayer {
     pub fn set_pitch(&self, pitch: f32) {
         let clamped = pitch.clamp(0.25, 4.0);
         *self.current_pitch.lock().unwrap() = clamped;
-        println!("🎵 Pitch alterado para {:.2}", clamped);
     }
 
     /// Obtém o pitch atual

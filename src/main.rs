@@ -1,72 +1,15 @@
 mod audio;
+mod audio_controller;
 mod camera;
 mod commands;
 mod config;
 
 use audio::AudioPlayer;
-use commands::{KeyCommand, key_to_command, get_pitch_factor, get_pitch_adjustment_message};
+use audio_controller::AudioController;
+use commands::{KeyCommand, key_to_command};
 use opencv::core::Mat;
 use opencv::highgui::{WINDOW_AUTOSIZE, imshow, named_window, wait_key};
 use std::error::Error;
-
-/// Ajusta o pitch e reinicia o áudio se estiver tocando
-fn adjust_pitch_with_restart(
-    audio_player: &AudioPlayer,
-    new_pitch: f32,
-    is_audio_playing: bool,
-    audio_file: &str,
-) -> Result<bool, Box<dyn Error>> {
-    audio_player.set_pitch(new_pitch);
-    
-    if is_audio_playing {
-        audio_player.stop();
-        audio_player.play_file(audio_file)?;
-    }
-    
-    Ok(is_audio_playing)
-}
-
-/// Processa comando de ajuste de pitch
-fn process_pitch_adjustment(
-    key: i32,
-    audio_player: &AudioPlayer,
-    is_audio_playing: bool,
-    audio_file: &str,
-) -> Result<Option<bool>, Box<dyn Error>> {
-    if let Some(factor) = get_pitch_factor(key) {
-        let new_pitch = commands::clamp_pitch(
-            audio_player.get_pitch() * factor,
-            config::MIN_PITCH,
-            config::MAX_PITCH
-        );
-        
-        let current_pitch = audio_player.get_pitch();
-        if (new_pitch - current_pitch).abs() > 0.001 {
-            println!("{} para: {:.2}", get_pitch_adjustment_message(factor), new_pitch);
-            let playing = adjust_pitch_with_restart(audio_player, new_pitch, is_audio_playing, audio_file)?;
-            return Ok(Some(playing));
-        }
-    }
-    
-    Ok(None)
-}
-
-/// Alterna entre reproduzir e parar o áudio
-fn toggle_audio_playback(
-    audio_player: &AudioPlayer,
-    is_audio_playing: bool,
-    audio_file: &str,
-) -> Result<bool, Box<dyn Error>> {
-    if is_audio_playing {
-        audio_player.stop();
-        println!("⏹️  Áudio parado");
-        Ok(false)
-    } else {
-        audio_player.play_file(audio_file)?;
-        println!("▶️  Áudio iniciado (pitch: {:.2})", audio_player.get_pitch());
-        Ok(true)
-    }
-}
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("🎬 === Projeto Visão + Gestos + Áudio ===");
@@ -75,7 +18,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("  ESPAÇO  - Iniciar/Parar áudio");
     println!("  + / -   - Ajuste fino de pitch");
     println!("  R       - Resetar pitch para normal");
-    println!("  P       - Efeito sonoro rápido");
     println!();
 
     // Initialize audio system
@@ -95,6 +37,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
+    // Create audio controller
+    let mut audio_controller = AudioController::new(audio_player, audio_file);
+
     // Initialize camera or video
     let (mut cam, is_camera) = camera::initialize_capture()?;
 
@@ -102,10 +47,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     named_window("Video", WINDOW_AUTOSIZE)?;
 
     println!("🎥 Iniciando captura de vídeo...");
-    println!("🎵 Pitch atual: {:.2}", audio_player.get_pitch());
+    println!("🎵 Pitch atual: {:.2}", audio_controller.get_current_pitch());
     println!();
-
-    let mut is_audio_playing = false;
 
     // Main loop
     loop {
@@ -126,30 +69,19 @@ fn main() -> Result<(), Box<dyn Error>> {
         match command {
             KeyCommand::Exit => {
                 println!("\n✅ Programa encerrado!");
-                audio_player.stop();
+                audio_controller.stop();
                 break;
             }
             KeyCommand::ToggleAudio => {
-                is_audio_playing = toggle_audio_playback(&audio_player, is_audio_playing, &audio_file)?;
+                audio_controller.toggle_audio_playback()?;
             }
             KeyCommand::ResetPitch => {
-                audio_player.set_pitch(config::DEFAULT_PITCH);
-                println!("🔄 Pitch resetado para 1.0");
-                
-                if is_audio_playing {
-                    audio_player.stop();
-                    audio_player.play_file(&audio_file)?;
-                    println!("🔁 Áudio reiniciado com pitch normal");
-                }
+                audio_controller.reset_pitch()?;
             }
             KeyCommand::AdjustPitch(_) => {
-                if let Ok(Some(playing)) = process_pitch_adjustment(
-                    key, &audio_player, is_audio_playing, &audio_file
-                ) {
-                    is_audio_playing = playing;
-                }
+                audio_controller.process_pitch_adjustment(key)?;
             }
-            KeyCommand::None => {} // No action for other keys
+            KeyCommand::None => {}
         }
     }
 

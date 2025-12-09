@@ -12,9 +12,9 @@ pub enum KeyCommand {
 
 /// Mapeamento de teclas para comandos
 pub const KEY_MAPPINGS: &[(i32, KeyCommand)] = &[
-    (27, KeyCommand::Exit),           // ESC
-    (32, KeyCommand::ToggleAudio),    // SPACE
-    (114, KeyCommand::ResetPitch),    // 'r'
+    (27, KeyCommand::Exit),              // ESC
+    (32, KeyCommand::ToggleAudio),       // SPACE
+    (114, KeyCommand::ResetPitch),       // 'r'
     (43, KeyCommand::AdjustPitch(1.05)), // '+' (fine)
     (61, KeyCommand::AdjustPitch(1.05)), // '=' (fine, Shift not pressed)
     (45, KeyCommand::AdjustPitch(0.95)), // '-' (fine)
@@ -37,20 +37,4 @@ pub fn get_pitch_factor(key: i32) -> Option<f32> {
         KeyCommand::AdjustPitch(factor) => Some(factor),
         _ => None,
     }
-}
-
-/// Gera uma mensagem descritiva para o ajuste de pitch
-pub fn get_pitch_adjustment_message(factor: f32) -> String {
-    match factor {
-        f if f == 1.1 => String::from("⬆️  Pitch aumentado (grosso)"),
-        f if f == 0.9 => String::from("⬇️  Pitch diminuído (grosso)"),
-        f if f == 1.05 => String::from("🔧 Pitch aumentado (fino)"),
-        f if f == 0.95 => String::from("🔧 Pitch diminuído (fino)"),
-        _ => format!("🔄 Pitch ajustado por fator {:.2}", factor),
-    }
-}
-
-/// Valida e aplica limite ao pitch
-pub fn clamp_pitch(pitch: f32, min_pitch: f32, max_pitch: f32) -> f32 {
-    pitch.clamp(min_pitch, max_pitch)
 }
