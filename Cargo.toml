@@ -1,9 +1,9 @@
 [package]
-name = "vision-gesture-audio-lp"
+name = "aruco-audio-lp"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cpal = "0.16.0"
 opencv = "0.97"
-cpal = "0.16"
-atomic_float = "1.1"
+rodio = "0.21.1"

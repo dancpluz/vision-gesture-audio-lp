@@ -34,7 +34,7 @@ else
 fi
 
 # Compilar se necessário
-if [ ! -f "target/release/vision-gesture-audio-lp" ]; then
+if [ ! -f "target/release/aruco-audio-lp" ]; then
     echo "Compilando projeto..."
     cargo build --release
 fi
@@ -47,4 +47,4 @@ echo "  - ESC: Sair"
 echo ""
 
 # Executar programa
-./target/release/vision-gesture-audio-lp
+./target/release/aruco-audio-lp
