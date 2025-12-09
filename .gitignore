@@ -1,7 +1,6 @@
 # Rust
 /target/
 Cargo.lock
-.env*
 
 # IDE
 .vscode/
@@ -30,3 +29,6 @@ vcpkg/installed/
 
 # Invalid Windows filename
 nul
+
+manual_capture*
+.env*

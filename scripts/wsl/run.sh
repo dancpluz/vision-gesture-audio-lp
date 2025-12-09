@@ -42,7 +42,6 @@ fi
 echo ""
 echo "🎬 Executando programa..."
 echo "Controles:"
-echo "  - ESPAÇO: Calibrar fundo"
 echo "  - S: Salvar frame"
 echo "  - ESC: Sair"
 echo ""
