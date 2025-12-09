@@ -1,7 +1,7 @@
 //! Controller para gerenciamento de operações de áudio
 
 use crate::audio::AudioPlayer;
-use crate::commands::get_pitch_factor;
+use crate::audio_commands::get_pitch_factor;
 use crate::config;
 
 /// Controlador de operações de áudio

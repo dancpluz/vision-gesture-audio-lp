@@ -4,6 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cpal = "0.16.0"
-opencv = "0.97"
+opencv = { version = "0.97", features = ["videoio","imgproc", "highgui", "objdetect"] }
 rodio = "0.21.1"
