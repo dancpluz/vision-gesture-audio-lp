@@ -61,3 +61,9 @@ pub fn read_frame(
     
     Ok(true)
 }
+
+pub fn release_capture(cam: &mut VideoCapture) -> Result<(), Box<dyn Error>> {
+    cam.release()?;
+    println!("📷 Recurso da câmera liberado");
+    Ok(())
+}

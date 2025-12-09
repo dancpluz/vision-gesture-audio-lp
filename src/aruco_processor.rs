@@ -1,11 +1,12 @@
 //! Processador para detecção de marcadores ArUco e mapeamento para comandos.
 use opencv::{
-    core::{Point2f, Scalar, Vector},
+    core::{Point, Point2f, Scalar, Vector},
+    imgproc::{FONT_HERSHEY_SIMPLEX, LINE_AA, put_text},
     objdetect::{
         ArucoDetector, DetectorParameters, PredefinedDictionaryType, RefineParameters,
         get_predefined_dictionary,
     },
-    prelude::ArucoDetectorTraitConst,
+    prelude::{ArucoDetectorTraitConst, MatTraitConst},
 };
 use std::error::Error;
 
@@ -46,56 +47,45 @@ impl DetectedMarker {
     }
 }
 
+/// Posição normalizada de um marcador
+#[derive(Debug, Clone, Copy)]
+pub struct NormalizedPosition {
+    pub x: f32, // -1 (esquerda) a 1 (direita), 0 = centro
+    pub y: f32, // -1 (cima) a 1 (baixo), 0 = centro
+    pub detected: bool,
+}
+
+impl NormalizedPosition {
+    pub fn new(x: f32, y: f32, detected: bool) -> Self {
+        NormalizedPosition { x, y, detected }
+    }
+}
+
 /// Processador principal para detecção de ArUco
 pub struct ArucoProcessor {
     detector: ArucoDetector,
-    last_detected_ids: Vec<i32>,
     min_marker_size: f32, // Tamanho mínimo do marcador em pixels
+    last_position: NormalizedPosition,
 }
 
 impl ArucoProcessor {
-    /// Cria um novo processador ArUco com parâmetros otimizados
+    /// Cria um novo processador ArUco
     pub fn new() -> Result<Self, Box<dyn Error>> {
-        // 1. Obter dicionário ARUCO_ORIGINAL
         let dictionary = get_predefined_dictionary(PredefinedDictionaryType::DICT_ARUCO_ORIGINAL)?;
-
-        // 2. Criar parâmetros do detector com valores padrão
         let parameters = DetectorParameters::default()?;
-
-        // 3. Criar parâmetros de refinamento
         let refine_params = RefineParameters {
             min_rep_distance: 10.0,
             error_correction_rate: 3.0,
             check_all_orders: true,
         };
 
-        // 4. Criar o detector Aruco
         let detector = ArucoDetector::new(&dictionary, &parameters, refine_params)?;
 
         Ok(ArucoProcessor {
             detector,
-            last_detected_ids: Vec::new(),
-            min_marker_size: 30.0, // Tamanho mínimo de 30 pixels
+            min_marker_size: 30.0,
+            last_position: NormalizedPosition::new(0.0, 0.0, false),
         })
-    }
-
-    /// Configura parâmetros de detecção para evitar quadrados pequenos
-    pub fn configure_for_better_detection(
-        &mut self,
-        image_width: i32,
-        image_height: i32,
-    ) -> Result<(), Box<dyn Error>> {
-        // Vamos usar pós-processamento para filtrar marcadores pequenos
-        // Definir tamanho mínimo baseado no tamanho da imagem
-        let min_dimension = image_width.min(image_height) as f32;
-        self.min_marker_size = min_dimension * 0.5; // 10% da dimensão menor
-
-        println!(
-            "🔧 Configuração de detecção: tamanho mínimo = {} pixels",
-            self.min_marker_size
-        );
-
-        Ok(())
     }
 
     /// Detecta marcadores em um frame de vídeo com filtro de tamanho
@@ -107,11 +97,9 @@ impl ArucoProcessor {
         let mut ids = Vector::<i32>::new();
         let mut rejected = Vector::<Vector<Point2f>>::new();
 
-        // Executar detecção principal
         self.detector
             .detect_markers(frame, &mut corners, &mut ids, &mut rejected)?;
 
-        // Converter resultados para nossa estrutura e filtrar por tamanho
         let mut markers = Vec::new();
         for (i, id) in ids.iter().enumerate() {
             if let Ok(corner_vec) = corners.get(i) {
@@ -121,8 +109,7 @@ impl ArucoProcessor {
                     corners: corners_vec,
                 };
 
-                // Filtrar marcadores muito pequenos
-                if self.is_marker_valid(&marker, frame) {
+                if self.is_marker_valid(&marker) {
                     markers.push(marker);
                 }
             }
@@ -131,21 +118,18 @@ impl ArucoProcessor {
         Ok(markers)
     }
 
-    /// Verifica se um marcador é válido (tamanho suficiente, forma adequada)
-    fn is_marker_valid(&self, marker: &DetectedMarker, frame: &opencv::core::Mat) -> bool {
-        // 1. Verificar tamanho mínimo
+    /// Verifica se um marcador é válido
+    fn is_marker_valid(&self, marker: &DetectedMarker) -> bool {
         let perimeter = marker.perimeter();
         if perimeter < self.min_marker_size {
             return false;
         }
 
-        // 2. Verificar se é aproximadamente quadrado
         let corners = &marker.corners;
         if corners.len() != 4 {
             return false;
         }
 
-        // Calcular comprimentos dos lados
         let mut side_lengths = Vec::new();
         for i in 0..4 {
             let j = (i + 1) % 4;
@@ -154,15 +138,40 @@ impl ArucoProcessor {
             side_lengths.push((dx * dx + dy * dy).sqrt());
         }
 
-        // Verificar se todos os lados têm comprimento similar
         let avg_length: f32 = side_lengths.iter().sum::<f32>() / 4.0;
         let max_variation = side_lengths
             .iter()
             .map(|&l| (l - avg_length).abs() / avg_length)
             .fold(0f32, |a, b| a.max(b));
 
-        // Aceitar se a variação for menor que 30%
         max_variation < 0.3
+    }
+
+    /// Calcula a posição normalizada do marcador 0
+    pub fn calculate_marker0_position(
+        &mut self,
+        frame_width: i32,
+        frame_height: i32,
+        markers: &[DetectedMarker],
+    ) -> NormalizedPosition {
+        for marker in markers {
+            if marker.id == 0 {
+                let center = marker.center();
+
+                // Normalizar posição para [-1, 1]
+                let x_normalized = ((center.x * 2.0) / frame_width as f32) - 1.0;
+                let y_normalized = ((center.y * 2.0) / frame_height as f32) - 1.0;
+
+                let position = NormalizedPosition::new(x_normalized, y_normalized, true);
+                self.last_position = position;
+                return position;
+            }
+        }
+
+        // Marcador não detectado
+        let position = NormalizedPosition::new(0.0, 0.0, false);
+        self.last_position = position;
+        position
     }
 
     /// Desenha marcadores detectados no frame
@@ -187,87 +196,87 @@ impl ArucoProcessor {
             ids_vec.push(marker.id);
         }
 
-        // Desenhar marcadores detectados (verde)
         opencv::objdetect::draw_detected_markers(
             frame,
             &corners_vec,
             &ids_vec,
-            Scalar::new(0.0, 255.0, 0.0, 0.0), // Verde: BGR (0, 255, 0)
+            Scalar::new(0.0, 255.0, 0.0, 0.0),
         )?;
 
         Ok(())
     }
 
-    /// Identifica comandos baseados em marcadores recém-detectados
-    pub fn process_commands(&mut self, markers: &[DetectedMarker]) -> Vec<ArucoCommand> {
-        let current_ids: Vec<i32> = markers.iter().map(|m| m.id).collect();
-        let mut commands = Vec::new();
-
-        // Encontrar marcadores que apareceram agora (não estavam no frame anterior)
-        let newly_detected: Vec<i32> = current_ids
-            .iter()
-            .filter(|id| !self.last_detected_ids.contains(id))
-            .copied()
-            .collect();
-
-        // Mapear IDs para comandos de áudio
-        for marker_id in newly_detected {
-            if let Some(command) = self.map_marker_to_command(marker_id) {
-                commands.push(command);
-            }
-        }
-
-        // Atualizar estado para o próximo frame
-        self.last_detected_ids = current_ids;
-
-        commands
-    }
-
-    /// Mapeia IDs de marcadores para comandos de áudio
-    fn map_marker_to_command(&self, marker_id: i32) -> Option<ArucoCommand> {
-        let command_name = match marker_id {
-            0 => "toggle_audio",
-            1 => "reset_pitch",
-            2 => "increase_pitch",
-            3 => "decrease_pitch",
-            4 => "stop_audio",
-            5 => "test_sound",
-            6 => "pitch_up_coarse",
-            7 => "pitch_down_coarse",
-            _ => return None,
+    /// Desenha informações de posição do marcador 0 na tela
+    pub fn draw_position_info(
+        &self,
+        frame: &mut opencv::core::Mat,
+        position: &NormalizedPosition,
+    ) -> Result<(), Box<dyn Error>> {
+        // Cor baseada na detecção
+        let color = if position.detected {
+            Scalar::new(0.0, 255.0, 0.0, 0.0) // Verde quando detectado
+        } else {
+            Scalar::new(0.0, 0.0, 255.0, 0.0) // Vermelho quando não detectado
         };
 
-        Some(ArucoCommand {
-            marker_id,
-            command_name: command_name.to_string(),
-        })
-    }
+        // Texto principal com a posição
+        let main_text = if position.detected {
+            format!("({:.3}, {:.3})", position.x, position.y)
+        } else {
+            String::from("Nao detectado")
+        };
 
-    /// Retorna informações sobre os parâmetros usados
-    pub fn get_parameters_info(&self) -> String {
-        format!(
-            "ArUco Parameters:\n\
-             - Dictionary: DICT_ARUCO_ORIGINAL (1024 marcadores)\n\
-             - Tamanho mínimo do marcador: {} pixels\n\
-             - Filtro de forma ativado (verificação quadrática)\n\
-             - RefineParameters: min_rep_distance=10.0, error_correction_rate=3.0",
-            self.min_marker_size
-        )
+        // Posição do texto (canto superior esquerdo)
+        let text_position = Point::new(10, 30);
+
+        // Desenhar o texto principal
+        put_text(
+            frame,
+            &main_text,
+            text_position,
+            FONT_HERSHEY_SIMPLEX,
+            0.7,
+            color,
+            2,
+            LINE_AA,
+            false,
+        )?;
+
+        // Desenhar cruz de referência no centro da tela
+        let center_x = frame.cols() / 2;
+        let center_y = frame.rows() / 2;
+
+        // Linha horizontal (vermelha)
+        opencv::imgproc::line(
+            frame,
+            Point::new(center_x - 20, center_y),
+            Point::new(center_x + 20, center_y),
+            Scalar::new(0.0, 0.0, 255.0, 0.0),
+            1,
+            LINE_AA,
+            0,
+        )?;
+
+        // Linha vertical (vermelha)
+        opencv::imgproc::line(
+            frame,
+            Point::new(center_x, center_y - 20),
+            Point::new(center_x, center_y + 20),
+            Scalar::new(0.0, 0.0, 255.0, 0.0),
+            1,
+            LINE_AA,
+            0,
+        )?;
+
+        Ok(())
     }
 
     /// Ajusta o tamanho mínimo do marcador
     pub fn set_min_marker_size(&mut self, size: f32) {
-        self.min_marker_size = size.max(10.0); // Mínimo de 10 pixels
+        self.min_marker_size = size.max(10.0);
         println!(
             "🔧 Tamanho mínimo ajustado para: {} pixels",
             self.min_marker_size
         );
     }
-}
-
-/// Representa um comando gerado por um marcador ArUco
-#[derive(Debug, Clone)]
-pub struct ArucoCommand {
-    pub marker_id: i32,
-    pub command_name: String,
 }
