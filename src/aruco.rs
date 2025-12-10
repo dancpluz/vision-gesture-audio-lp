@@ -1,65 +1,14 @@
-//! Processador para detecção de marcadores ArUco e mapeamento para comandos.
 use opencv::{
-    core::{Point, Point2f, Scalar, Vector},
-    imgproc::{FONT_HERSHEY_SIMPLEX, LINE_AA, put_text},
+    core::{Point2f, Vector},
     objdetect::{
         ArucoDetector, DetectorParameters, PredefinedDictionaryType, RefineParameters,
         get_predefined_dictionary,
     },
-    prelude::{ArucoDetectorTraitConst, MatTraitConst},
+    prelude::{ArucoDetectorTraitConst},
 };
 use std::error::Error;
 
-/// Representa um marcador ArUco detectado
-#[derive(Debug, Clone)]
-pub struct DetectedMarker {
-    pub id: i32,
-    pub corners: Vec<Point2f>,
-}
-
-impl DetectedMarker {
-    /// Calcula o ponto central do marcador
-    pub fn center(&self) -> Point2f {
-        if self.corners.len() >= 4 {
-            let mut sum_x = 0.0;
-            let mut sum_y = 0.0;
-            for corner in &self.corners {
-                sum_x += corner.x;
-                sum_y += corner.y;
-            }
-            Point2f::new(sum_x / 4.0, sum_y / 4.0)
-        } else {
-            Point2f::new(0.0, 0.0)
-        }
-    }
-
-    /// Calcula o perímetro do marcador
-    pub fn perimeter(&self) -> f32 {
-        let mut perimeter = 0.0;
-        let n = self.corners.len();
-        for i in 0..n {
-            let j = (i + 1) % n;
-            let dx = self.corners[i].x - self.corners[j].x;
-            let dy = self.corners[i].y - self.corners[j].y;
-            perimeter += (dx * dx + dy * dy).sqrt();
-        }
-        perimeter
-    }
-}
-
-/// Posição normalizada de um marcador
-#[derive(Debug, Clone, Copy)]
-pub struct NormalizedPosition {
-    pub x: f32, // -1 (esquerda) a 1 (direita), 0 = centro
-    pub y: f32, // -1 (cima) a 1 (baixo), 0 = centro
-    pub detected: bool,
-}
-
-impl NormalizedPosition {
-    pub fn new(x: f32, y: f32, detected: bool) -> Self {
-        NormalizedPosition { x, y, detected }
-    }
-}
+use crate::ui::{DetectedMarker, NormalizedPosition};
 
 /// Processador principal para detecção de ArUco
 pub struct ArucoProcessor {
@@ -84,7 +33,7 @@ impl ArucoProcessor {
         Ok(ArucoProcessor {
             detector,
             min_marker_size: 30.0,
-            last_position: NormalizedPosition::new(0.0, 0.0, false),
+            last_position: NormalizedPosition::new(0.0, 0.0, false, None),
         })
     }
 
@@ -104,10 +53,7 @@ impl ArucoProcessor {
         for (i, id) in ids.iter().enumerate() {
             if let Ok(corner_vec) = corners.get(i) {
                 let corners_vec: Vec<Point2f> = corner_vec.iter().collect();
-                let marker = DetectedMarker {
-                    id,
-                    corners: corners_vec,
-                };
+                let marker = DetectedMarker::new(id, corners_vec);
 
                 if self.is_marker_valid(&marker) {
                     markers.push(marker);
@@ -120,16 +66,25 @@ impl ArucoProcessor {
 
     /// Verifica se um marcador é válido
     fn is_marker_valid(&self, marker: &DetectedMarker) -> bool {
-        let perimeter = marker.perimeter();
-        if perimeter < self.min_marker_size {
-            return false;
-        }
-
+        // Calcular perímetro
         let corners = &marker.corners;
         if corners.len() != 4 {
             return false;
         }
 
+        let mut perimeter = 0.0;
+        for i in 0..4 {
+            let j = (i + 1) % 4;
+            let dx = corners[i].x - corners[j].x;
+            let dy = corners[i].y - corners[j].y;
+            perimeter += (dx * dx + dy * dy).sqrt();
+        }
+
+        if perimeter < self.min_marker_size {
+            return false;
+        }
+
+        // Verificar se é aproximadamente quadrado
         let mut side_lengths = Vec::new();
         for i in 0..4 {
             let j = (i + 1) % 4;
@@ -156,119 +111,25 @@ impl ArucoProcessor {
     ) -> NormalizedPosition {
         for marker in markers {
             if marker.id == 0 {
-                let center = marker.center();
+                let center = marker.center;
 
                 // Normalizar posição para [-1, 1]
                 let x_normalized = ((center.x * 2.0) / frame_width as f32) - 1.0;
                 let y_normalized = ((center.y * 2.0) / frame_height as f32) - 1.0;
 
-                let position = NormalizedPosition::new(x_normalized, y_normalized, true);
+                // Centro em pixels
+                let center_px = Some(opencv::core::Point::new(center.x as i32, center.y as i32));
+                
+                let position = NormalizedPosition::new(x_normalized, y_normalized, true, center_px);
                 self.last_position = position;
                 return position;
             }
         }
 
         // Marcador não detectado
-        let position = NormalizedPosition::new(0.0, 0.0, false);
+        let position = NormalizedPosition::new(0.0, 0.0, false, None);
         self.last_position = position;
         position
-    }
-
-    /// Desenha marcadores detectados no frame
-    pub fn draw_markers(
-        &self,
-        frame: &mut opencv::core::Mat,
-        markers: &[DetectedMarker],
-    ) -> Result<(), Box<dyn Error>> {
-        if markers.is_empty() {
-            return Ok(());
-        }
-
-        let mut corners_vec = Vector::<Vector<Point2f>>::new();
-        let mut ids_vec = Vector::<i32>::new();
-
-        for marker in markers {
-            let mut corner_vec = Vector::<Point2f>::new();
-            for corner in &marker.corners {
-                corner_vec.push(*corner);
-            }
-            corners_vec.push(corner_vec);
-            ids_vec.push(marker.id);
-        }
-
-        opencv::objdetect::draw_detected_markers(
-            frame,
-            &corners_vec,
-            &ids_vec,
-            Scalar::new(0.0, 255.0, 0.0, 0.0),
-        )?;
-
-        Ok(())
-    }
-
-    /// Desenha informações de posição do marcador 0 na tela
-    pub fn draw_position_info(
-        &self,
-        frame: &mut opencv::core::Mat,
-        position: &NormalizedPosition,
-    ) -> Result<(), Box<dyn Error>> {
-        // Cor baseada na detecção
-        let color = if position.detected {
-            Scalar::new(0.0, 255.0, 0.0, 0.0) // Verde quando detectado
-        } else {
-            Scalar::new(0.0, 0.0, 255.0, 0.0) // Vermelho quando não detectado
-        };
-
-        // Texto principal com a posição
-        let main_text = if position.detected {
-            format!("({:.3}, {:.3})", position.x, position.y)
-        } else {
-            String::from("Nao detectado")
-        };
-
-        // Posição do texto (canto superior esquerdo)
-        let text_position = Point::new(10, 30);
-
-        // Desenhar o texto principal
-        put_text(
-            frame,
-            &main_text,
-            text_position,
-            FONT_HERSHEY_SIMPLEX,
-            0.7,
-            color,
-            2,
-            LINE_AA,
-            false,
-        )?;
-
-        // Desenhar cruz de referência no centro da tela
-        let center_x = frame.cols() / 2;
-        let center_y = frame.rows() / 2;
-
-        // Linha horizontal (vermelha)
-        opencv::imgproc::line(
-            frame,
-            Point::new(center_x - 20, center_y),
-            Point::new(center_x + 20, center_y),
-            Scalar::new(0.0, 0.0, 255.0, 0.0),
-            1,
-            LINE_AA,
-            0,
-        )?;
-
-        // Linha vertical (vermelha)
-        opencv::imgproc::line(
-            frame,
-            Point::new(center_x, center_y - 20),
-            Point::new(center_x, center_y + 20),
-            Scalar::new(0.0, 0.0, 255.0, 0.0),
-            1,
-            LINE_AA,
-            0,
-        )?;
-
-        Ok(())
     }
 
     /// Ajusta o tamanho mínimo do marcador
