@@ -21,7 +21,7 @@ Para que o projeto compile e rode, você precisa ter instalado no seu sistema:
 
 Você precisa deste marcador ArUco (ID 0, Dicionário Original) impresso ou na tela do celular para que a câmera o detecte.
 
-![Marcador ArUco ID 0](https://i.imgur.com/epL1SVv)
+![Marcador ArUco ID 0](aruco-id-0.jpg)
 
 No terminal, execute:
 
