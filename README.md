@@ -3,15 +3,29 @@
 Este projeto foi desenvolvido para a disciplina de Linguagens de Programação da Universidade de Brasília (UnB) no semestre 2025.2.
 
 **Grupo:**
-* Daniel Luz
-* Davi Vidal
-* Tiago Amaral
+* Daniel Luz - Arquitetura e Manipulação de Vídeo com OpenCV
+* Davi Vidal - Síntese de Áudio com Rodio
+* Tiago Amaral - Avaliação da Linguagem de Programação
 
 **Professor:** Marcelo Ladeira
 
 ## Sobre o Projeto
 
 Um instrumento virtual controlado por câmera escrito em Rust. O projeto rastreia um marcador ArUco (ID 0) e transforma a posição dele em som.
+
+## Diagramas
+
+### Fluxo Completo
+
+<picture>
+  <img src="docs/diagram-full.png" width="50%" >
+</picture>
+
+### Fluxo Simplificado
+
+<picture>
+  <img src="docs/diagram-simple.png" width="50%" >
+</picture>
 
 ## Compatibilidade
 
@@ -32,7 +46,9 @@ Para que o projeto compile e rode, você precisa ter instalado no seu sistema:
 
 Você precisa deste marcador ArUco (ID 0, Dicionário Original) impresso ou na tela do celular para que a câmera o detecte.
 
-![Marcador ArUco ID 0](aruco-id-0.jpg)
+<picture>
+  <img src="docs/aruco-id-0.jpg" width="30%" >
+</picture>
 
 No terminal, execute:
 
