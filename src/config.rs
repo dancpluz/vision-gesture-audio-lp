@@ -16,3 +16,5 @@ pub const DICTIONARY_TYPE: PredefinedDictionaryType = PredefinedDictionaryType::
 pub const COLOR_GREEN: Scalar = Scalar::new(0.0, 255.0, 0.0, 0.0);
 pub const COLOR_RED: Scalar = Scalar::new(0.0, 0.0, 255.0, 0.0);
 pub const COLOR_WHITE: Scalar = Scalar::new(255.0, 255.0, 255.0, 0.0);
+pub const COLOR_BLUE: Scalar = Scalar::new(255.0, 0.0, 0.0, 0.0);
+pub const COLOR_YELLOW: Scalar = Scalar::new(0.0, 255.0, 255.0, 0.0);

@@ -6,4 +6,3 @@ edition = "2024"
 [dependencies]
 opencv = { version = "0.97", features = ["videoio","imgproc", "highgui", "objdetect"] }
 rodio = "0.21.1"
-cpal = "0.16"

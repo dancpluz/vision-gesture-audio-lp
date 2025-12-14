@@ -1,5 +1,5 @@
 use crate::{
-    config::{COLOR_GREEN, COLOR_RED, COLOR_WHITE},
+    config::{COLOR_BLUE, COLOR_GREEN, COLOR_RED, COLOR_WHITE},
     theremin::ThereminController,
 };
 use opencv::{
@@ -194,6 +194,36 @@ pub fn draw_position_info(
         0.7,
         color,
         2,
+        LINE_AA,
+        false,
+    )?;
+
+    Ok(())
+}
+
+pub fn draw_debug_status(
+    frame: &mut opencv::core::Mat,
+    debug_mode: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let status_text = if debug_mode {
+        "DEBUG: ATIVADO (V para desativar)"
+    } else {
+        "DEBUG: DESATIVADO (V para ativar)"
+    };
+
+    let color = if debug_mode { COLOR_BLUE } else { COLOR_WHITE };
+
+    let text_size = get_text_size(status_text, FONT_HERSHEY_SIMPLEX, 0.6, 1, &mut 0)?;
+    let frame_width = frame.cols();
+
+    put_text(
+        frame,
+        status_text,
+        Point::new(frame_width - text_size.width - 10, 60),
+        FONT_HERSHEY_SIMPLEX,
+        0.6,
+        color,
+        1,
         LINE_AA,
         false,
     )?;

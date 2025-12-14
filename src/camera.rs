@@ -16,7 +16,7 @@ pub fn initialize_capture() -> Result<(VideoCapture, bool), Box<dyn Error>> {
         return Ok((cam, true));
     }
     
-    // Fallback para vídeo
+    // fallback para vídeo
     println!("[INFO] Câmera não encontrada. Carregando vídeo de exemplo...");
     
     for video_path in VIDEO_PATHS {
